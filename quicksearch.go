@@ -30,9 +30,9 @@ type QuickSearch struct {
 
 func NewQuickSearch(windowWidth int32, windowHeight int32) (result QuickSearch) {
 	result.BGRect = &sdl.Rect{X: 0, Y: 0, W: windowWidth, H: windowHeight}
-	result.ModalRect = &sdl.Rect{X: windowWidth/2 - 200, Y: windowHeight/2 - 150, W: 400, H: 0}
+	result.ModalRect = &sdl.Rect{X: windowWidth/2 - 181, Y: 200, W: 362, H: 323}
 
-	result.Input = NewInputField(&sdl.Rect{X: result.ModalRect.X + 5, Y: result.ModalRect.Y + 5, W: result.ModalRect.W - 10, H: 28})
+	result.Input = NewInputField(&sdl.Rect{X: result.ModalRect.X, Y: result.ModalRect.Y, W: result.ModalRect.W, H: 28})
 
 	result.Active = false
 
@@ -42,9 +42,9 @@ func NewQuickSearch(windowWidth int32, windowHeight int32) (result QuickSearch) 
 func (search *QuickSearch) Resize(windowWidth int32, windowHeight int32) {
 	search.BGRect.W = windowWidth
 	search.BGRect.H = windowHeight
-	search.ModalRect = &sdl.Rect{X: windowWidth/2 - 200, Y: windowHeight/2 - 150, W: 400, H: 0}
+	search.ModalRect = &sdl.Rect{X: windowWidth/2 - 181, Y: 200, W: 362, H: 323}
 
-	search.Input.Resize(&sdl.Rect{X: search.ModalRect.X + 5, Y: search.ModalRect.Y + 5, W: search.ModalRect.W - 10, H: 28})
+	search.Input.Resize(&sdl.Rect{X: search.ModalRect.X, Y: search.ModalRect.Y, W: search.ModalRect.W, H: 28})
 }
 
 func (search *QuickSearch) Tick(input *Input) {
@@ -115,6 +115,8 @@ func (search *QuickSearch) Tick(input *Input) {
 			} else {
 				panic("Unreachable")
 			}
+		} else {
+			search.SearchResult = search.ItemsToSearch
 		}
 
 		if len(search.SearchResult) > 0 {
@@ -133,8 +135,8 @@ func (search *QuickSearch) Open(inputPlaceholder string, itemsToSearch []string,
 	search.Input.Placeholder = inputPlaceholder
 	search.Active = true
 	search.ItemsToSearch = itemsToSearch
-	search.SearchResult = make([]string, 0)
-	search.ActiveResult = -1
+	search.SearchResult = search.ItemsToSearch
+	search.ActiveResult = 0
 	search.Method = searchMethod
 	search.SubmitCallback = callback
 }
@@ -144,49 +146,57 @@ func (search *QuickSearch) Render(rend *sdl.Renderer, app *App) {
 		return
 	}
 
-	mainFont := app.Fonts["16"]
-	itemHeight := mainFont.Size + 10
+	renderer.DrawRectTransparent(rend, search.BGRect, sdl.Color{R: 0, G: 0, B: 0, A: 102})
 
-	renderer.DrawRectTransparent(rend, search.BGRect, sdl.Color{R: 0, G: 0, B: 0, A: 122})
-	if len(search.SearchResult) == 0 {
-		search.ModalRect.H = 28 + 10
-	} else {
-		search.ModalRect.H = 28 + 10 + int32(len(search.SearchResult))*itemHeight + int32(len(search.SearchResult)) + 10
+	borderRect := sdl.Rect{
+		X: search.ModalRect.X - 2,
+		Y: search.ModalRect.Y - 2,
+		W: search.ModalRect.W + 4,
+		H: search.ModalRect.H + 4,
 	}
-	renderer.DrawRect(rend, search.ModalRect, sdl.Color{R: 48, G: 51, B: 59, A: 255})
+	renderer.DrawRect(rend, &borderRect, sdl.Color{R: 18, G: 17, B: 20, A: 255})
+
 	search.Input.Render(rend, app)
 
-	if len(search.SearchResult) > 0 {
-		resultsRect := sdl.Rect{
-			X: search.ModalRect.X + 5,
-			Y: search.ModalRect.Y + 28 + 10,
-			W: search.ModalRect.W - 10,
-			H: itemHeight*int32(len(search.SearchResult)) + int32(len(search.SearchResult)-1) + 2,
+	resultsRect := sdl.Rect{
+		X: search.ModalRect.X,
+		Y: search.ModalRect.Y + 28 + 2,
+		W: search.ModalRect.W,
+		H: search.ModalRect.H - 28 - 2,
+	}
+	renderer.DrawRect(rend, &resultsRect, sdl.Color{R: 47, G: 46, B: 47, A: 255})
+
+	mainFont := app.Fonts["16"]
+
+	itemTop := resultsRect.Y
+	for index, item := range search.SearchResult {
+		itemBGRect := sdl.Rect{
+			X: resultsRect.X,
+			Y: itemTop,
+			W: resultsRect.W,
+			H: 28 + 2,
 		}
-		renderer.DrawRect(rend, &resultsRect, sdl.Color{R: 32, G: 33, B: 35, A: 255})
 
-		for index, item := range search.SearchResult {
-			itemBGRect := sdl.Rect{
-				X: resultsRect.X + 1,
-				Y: resultsRect.Y + (mainFont.Size+10)*int32(index) + int32(index) + 1,
-				W: resultsRect.W - 2,
-				H: mainFont.Size + 10,
-			}
-
-			itemWidth := mainFont.GetStringWidth(item)
-			itemRect := sdl.Rect{
-				X: itemBGRect.X + 5,
-				Y: itemBGRect.Y + (itemBGRect.H-mainFont.Size)/2,
-				W: itemWidth,
-				H: mainFont.Size,
-			}
-
-			renderer.DrawRect(rend, &itemBGRect, sdl.Color{R: 61, G: 64, B: 71, A: 255})
-			renderer.DrawText(rend, &mainFont, item, &itemRect, sdl.Color{R: 221, G: 221, B: 221, A: 255})
-
-			if index == search.ActiveResult {
-				renderer.DrawRectOutline(rend, &itemBGRect, sdl.Color{R: 221, G: 221, B: 221, A: 255}, 1)
-			}
+		itemWidth := mainFont.GetStringWidth(item)
+		itemRect := sdl.Rect{
+			X: itemBGRect.X + 10,
+			Y: itemBGRect.Y + (itemBGRect.H-mainFont.Size)/2,
+			W: itemWidth,
+			H: mainFont.Size,
 		}
+
+		bgColor := sdl.Color{R: 63, G: 63, B: 63, A: 255}
+		if index == search.ActiveResult {
+			bgColor = sdl.Color{R: 77, G: 77, B: 77, A: 255}
+		}
+
+		renderer.DrawRect(rend, &itemBGRect, bgColor)
+		renderer.DrawText(rend, &mainFont, item, &itemRect, sdl.Color{R: 171, G: 171, B: 171, A: 255})
+
+		if index == search.ActiveResult {
+			renderer.DrawRectOutline(rend, &itemBGRect, sdl.Color{R: 92, G: 91, B: 92, A: 255}, 1)
+		}
+
+		itemTop += 28 + 2
 	}
 }
