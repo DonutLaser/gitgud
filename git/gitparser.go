@@ -36,7 +36,10 @@ func ParseBranches(text string) (result []string) {
 
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		result = append(result, strings.Trim(line, "'"))
+		trimmed := strings.Trim(line, "'")
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
 	}
 
 	return
