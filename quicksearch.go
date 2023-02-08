@@ -133,12 +133,13 @@ func (search *QuickSearch) Tick(input *Input) {
 
 func (search *QuickSearch) Open(inputPlaceholder string, itemsToSearch []string, searchMethod SearchMethod, callback func(string)) {
 	search.Input.Placeholder = inputPlaceholder
-	search.Active = true
 	search.ItemsToSearch = itemsToSearch
 	search.SearchResult = search.ItemsToSearch
 	search.ActiveResult = 0
 	search.Method = searchMethod
 	search.SubmitCallback = callback
+
+	search.Active = true
 }
 
 func (search *QuickSearch) Render(rend *sdl.Renderer, app *App) {

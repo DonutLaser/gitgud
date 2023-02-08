@@ -34,6 +34,7 @@ type App struct {
 	Staging   Staging
 	DiffView  DiffView
 	Search    QuickSearch
+	Commit    Commit
 	NoRepos   NoRepos
 	NoChanges NoChanges
 
@@ -51,6 +52,7 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 	result.Staging = NewStaging(windowHeight)
 	result.DiffView = NewDiffView(windowWidth, windowHeight)
 	result.Search = NewQuickSearch(windowWidth, windowHeight)
+	result.Commit = NewCommit(windowWidth, windowHeight)
 	result.NoRepos = NewNoRepos(windowWidth, windowHeight)
 	result.NoChanges = NewNoChanges(windowWidth, windowHeight)
 
@@ -79,6 +81,7 @@ func (app *App) Resize(windowWidth int32, windowHeight int32) {
 	app.Staging.Resize(windowHeight)
 	app.DiffView.Resize(windowWidth, windowHeight)
 	app.Search.Resize(windowWidth, windowHeight)
+	app.Commit.Resize(windowWidth, windowHeight)
 	app.NoRepos.Resize(windowWidth, windowHeight)
 	app.NoChanges.Resize(windowWidth, windowHeight)
 }
@@ -94,6 +97,12 @@ func (app *App) Refresh() {
 func (app *App) Tick(input *Input) {
 	if app.Search.Active {
 		app.Search.Tick(input)
+
+		return
+	}
+
+	if app.Commit.Active {
+		app.Commit.Tick(input)
 
 		return
 	}
@@ -139,6 +148,7 @@ func (app *App) Render(renderer *sdl.Renderer) {
 		}
 
 		app.Search.Render(renderer, app)
+		app.Commit.Render(renderer, app)
 	}
 
 	renderer.Present()
@@ -218,6 +228,23 @@ func (app *App) handleNormalInput(input *Input) {
 		if input.Ctrl {
 			settings.OpenSettingsInExternalProgram()
 		}
+	} else if input.TypedCharacter == 'I' {
+		app.Commit.Open(func(message string) {
+			filesToCommit := make([]string, 0)
+			for _, change := range app.Repo.Changes {
+				if change.Selected {
+					filesToCommit = append(filesToCommit, change.Filename)
+				}
+			}
+
+			git.Commit(filesToCommit, message, app.Repo.Path)
+
+			app.Repo.Changes = git.Status(app.Repo.Path)
+			app.Staging.ShowEntries(app.Repo.Changes)
+
+			activeEntry := app.Staging.GetActiveEntry()
+			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
+		})
 	}
 }
 

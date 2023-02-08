@@ -85,34 +85,34 @@ func (diff *GitDiff) ToString() string {
 // https://stackoverflow.com/questions/27508982/interpreting-git-diff-output
 
 func Status(pathToRepo string) (result []GitStatusEntry) {
-	output := executeGit("status --porcelain", pathToRepo)
+	output := executeGit([]string{"status", "--porcelain"}, pathToRepo)
 	return ParseStatus(output)
 }
 
 func Discard(filename string, pathToRepo string) {
-	executeGit(fmt.Sprintf("restore %s", filename), pathToRepo)
+	executeGit([]string{"restore", filename}, pathToRepo)
 }
 
 func DiscardAll(pathToRepo string) {
-	executeGit("reset --hard", pathToRepo)
-	executeGit("clean -fxd", pathToRepo)
+	executeGit([]string{"reset", "--hard"}, pathToRepo)
+	executeGit([]string{"clean", "-fxd"}, pathToRepo)
 }
 
 func Stash(pathToRepo string) {
-	executeGit("stash -u", pathToRepo)
+	executeGit([]string{"stash", "-u"}, pathToRepo)
 }
 
 func SwitchToBranch(branchName string, pathToRepo string) {
-	executeGit(fmt.Sprintf("checkout %s", branchName), pathToRepo)
+	executeGit([]string{"checkout", branchName}, pathToRepo)
 }
 
 func ListBranches(pathToRepo string) (result []string) {
-	output := executeGit("branch -l --format='%(refname:short)'", pathToRepo)
+	output := executeGit([]string{"branch", "-l", "--format='%(refname:short)'"}, pathToRepo)
 	return ParseBranches(output)
 }
 
 func GetCurrentBranch(pathToRepo string) string {
-	output := executeGit("branch --show-current", pathToRepo)
+	output := executeGit([]string{"branch", "--show-current"}, pathToRepo)
 	return strings.TrimSpace(output)
 }
 
@@ -129,26 +129,30 @@ func DiffEntry(entry GitStatusEntry, pathToRepo string) (result GitDiff) {
 	}
 }
 
+func Commit(files []string, message string, pathToRepo string) (result []GitStatusEntry) {
+	executeGit([]string{"commit", "-o", strings.Join(files, " "), "-m", message}, pathToRepo)
+	return Status(pathToRepo)
+}
+
 func diff(filename string, pathToRepo string) (result GitDiff) {
-	output := executeGit(fmt.Sprintf("diff %s", filename), pathToRepo)
+	output := executeGit([]string{"diff", filename}, pathToRepo)
 	return ParseDiff(output)
 }
 
 func diffNew(filename string, pathToRepo string) (result GitDiff) {
-	output := executeGit(fmt.Sprintf("diff --cached %s", filename), pathToRepo)
+	output := executeGit([]string{"diff", "--cached", filename}, pathToRepo)
 	return ParseDiff(output)
 }
 
 func diffRemoved(filename string, pathToRepo string) (result GitDiff) {
-	output := executeGit(fmt.Sprintf("diff -- %s", filename), pathToRepo)
+	output := executeGit([]string{"diff", "--", filename}, pathToRepo)
 	return ParseDiff(output)
 }
 
-func executeGit(command string, cwd string) string {
+func executeGit(command []string, cwd string) string {
 	var result bytes.Buffer
 
-	args := strings.Split(command, " ")
-	cmd := exec.Command("git", args...)
+	cmd := exec.Command("git", command...)
 	cmd.Stdout = &result
 
 	if cwd != "" {
