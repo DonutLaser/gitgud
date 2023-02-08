@@ -237,14 +237,18 @@ func (app *App) handleNormalInput(input *Input) {
 				}
 			}
 
-			git.Commit(filesToCommit, message, app.Repo.Path)
-
-			app.Repo.Changes = git.Status(app.Repo.Path)
+			app.Repo.Changes = git.Commit(filesToCommit, message, app.Repo.Path)
 			app.Staging.ShowEntries(app.Repo.Changes)
 
 			activeEntry := app.Staging.GetActiveEntry()
 			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
 		})
+	} else if input.TypedCharacter == 'u' {
+		app.Repo.Changes = git.UndoLastCommit(app.Repo.Path)
+		app.Staging.ShowEntries(app.Repo.Changes)
+
+		activeEntry := app.Staging.GetActiveEntry()
+		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
 	}
 }
 

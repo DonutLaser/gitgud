@@ -134,6 +134,11 @@ func Commit(files []string, message string, pathToRepo string) (result []GitStat
 	return Status(pathToRepo)
 }
 
+func UndoLastCommit(pathToRepo string) (result []GitStatusEntry) {
+	executeGit([]string{"reset", "--soft", "HEAD~"}, pathToRepo)
+	return Status(pathToRepo)
+}
+
 func diff(filename string, pathToRepo string) (result GitDiff) {
 	output := executeGit([]string{"diff", filename}, pathToRepo)
 	return ParseDiff(output)
