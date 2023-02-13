@@ -230,14 +230,7 @@ func (app *App) handleNormalInput(input *Input) {
 		}
 	} else if input.TypedCharacter == 'I' {
 		app.Commit.Open(func(message string) {
-			filesToCommit := make([]string, 0)
-			for _, change := range app.Repo.Changes {
-				if change.Selected {
-					filesToCommit = append(filesToCommit, change.Filename)
-				}
-			}
-
-			app.Repo.Changes = git.Commit(filesToCommit, message, app.Repo.Path)
+			app.Repo.Changes = git.Commit(app.Repo.Changes, message, app.Repo.Path)
 			app.Staging.ShowEntries(app.Repo.Changes)
 
 			activeEntry := app.Staging.GetActiveEntry()

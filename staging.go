@@ -134,6 +134,8 @@ func (staging *Staging) changeTypeToColor(t git.GitStatusEntryType) sdl.Color {
 	switch t {
 	case git.GIT_ENTRY_MODIFIED:
 		return sdl.Color{R: 207, G: 173, B: 16, A: 255}
+	case git.GIT_ENTRY_NEW_UNSTAGED:
+		fallthrough
 	case git.GIT_ENTRY_NEW:
 		return sdl.Color{R: 82, G: 153, B: 19, A: 255}
 	case git.GIT_ENTRY_DELETED:

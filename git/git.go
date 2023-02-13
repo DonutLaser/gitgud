@@ -12,6 +12,7 @@ type GitDiffLineType uint8
 
 const (
 	GIT_ENTRY_MODIFIED GitStatusEntryType = iota
+	GIT_ENTRY_NEW_UNSTAGED
 	GIT_ENTRY_NEW
 	GIT_ENTRY_DELETED
 )
@@ -118,6 +119,8 @@ func GetCurrentBranch(pathToRepo string) string {
 
 func DiffEntry(entry GitStatusEntry, pathToRepo string) (result GitDiff) {
 	switch entry.Type {
+	case GIT_ENTRY_NEW_UNSTAGED:
+		return diffUnstaged(entry.Filename, pathToRepo)
 	case GIT_ENTRY_NEW:
 		return diffNew(entry.Filename, pathToRepo)
 	case GIT_ENTRY_MODIFIED:
@@ -129,8 +132,20 @@ func DiffEntry(entry GitStatusEntry, pathToRepo string) (result GitDiff) {
 	}
 }
 
-func Commit(files []string, message string, pathToRepo string) (result []GitStatusEntry) {
-	executeGit([]string{"commit", "-o", strings.Join(files, " "), "-m", message}, pathToRepo)
+func Commit(entries []GitStatusEntry, message string, pathToRepo string) (result []GitStatusEntry) {
+	fileNames := make([]string, 0)
+
+	for _, entry := range entries {
+		if entry.Selected {
+			if entry.Type == GIT_ENTRY_NEW_UNSTAGED {
+				executeGit([]string{"add", entry.Filename}, pathToRepo)
+			}
+
+			fileNames = append(fileNames, entry.Filename)
+		}
+	}
+
+	executeGit([]string{"commit", "-o", strings.Join(fileNames, " "), "-m", message}, pathToRepo)
 	return Status(pathToRepo)
 }
 
@@ -154,20 +169,24 @@ func diffRemoved(filename string, pathToRepo string) (result GitDiff) {
 	return ParseDiff(output)
 }
 
+func diffUnstaged(filename string, pathToRepo string) (result GitDiff) {
+	output := executeGit([]string{"diff", "--no-index", "/dev/null", filename}, pathToRepo)
+	return ParseDiff(output)
+}
+
 func executeGit(command []string, cwd string) string {
 	var result bytes.Buffer
+	var er bytes.Buffer
 
 	cmd := exec.Command("git", command...)
 	cmd.Stdout = &result
+	cmd.Stderr = &er
 
 	if cwd != "" {
 		cmd.Dir = cwd
 	}
 
-	err := cmd.Run()
-	if err != nil {
-		panic(err)
-	}
+	cmd.Run()
 
 	return result.String()
 }

@@ -155,7 +155,7 @@ func stringToChangeType(str string) GitStatusEntryType {
 	case "M":
 		return GIT_ENTRY_MODIFIED
 	case "??":
-		fallthrough
+		return GIT_ENTRY_NEW_UNSTAGED
 	case "A":
 		return GIT_ENTRY_NEW
 	case "D":
