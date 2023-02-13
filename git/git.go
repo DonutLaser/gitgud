@@ -120,13 +120,13 @@ func GetCurrentBranch(pathToRepo string) string {
 func DiffEntry(entry GitStatusEntry, pathToRepo string) (result GitDiff) {
 	switch entry.Type {
 	case GIT_ENTRY_NEW_UNSTAGED:
-		return diffUnstaged(entry.Filename, pathToRepo)
+		fallthrough
 	case GIT_ENTRY_NEW:
 		return diffNew(entry.Filename, pathToRepo)
 	case GIT_ENTRY_MODIFIED:
-		return diff(entry.Filename, pathToRepo)
+		fallthrough
 	case GIT_ENTRY_DELETED:
-		return diffRemoved(entry.Filename, pathToRepo)
+		return diffModified(entry.Filename, pathToRepo)
 	default:
 		panic("Unreachable")
 	}
@@ -154,24 +154,15 @@ func UndoLastCommit(pathToRepo string) (result []GitStatusEntry) {
 	return Status(pathToRepo)
 }
 
-func diff(filename string, pathToRepo string) (result GitDiff) {
-	output := executeGit([]string{"diff", filename}, pathToRepo)
-	return ParseDiff(output)
-}
-
 func diffNew(filename string, pathToRepo string) (result GitDiff) {
-	output := executeGit([]string{"diff", "--cached", filename}, pathToRepo)
-	return ParseDiff(output)
-}
-
-func diffRemoved(filename string, pathToRepo string) (result GitDiff) {
-	output := executeGit([]string{"diff", "--", filename}, pathToRepo)
-	return ParseDiff(output)
-}
-
-func diffUnstaged(filename string, pathToRepo string) (result GitDiff) {
 	output := executeGit([]string{"diff", "--no-index", "/dev/null", filename}, pathToRepo)
 	return ParseDiff(output)
+}
+
+func diffModified(filename string, pathToRepo string) (result GitDiff) {
+	output := executeGit([]string{"diff", "HEAD", "--", filename}, pathToRepo)
+	return ParseDiff(output)
+
 }
 
 func executeGit(command []string, cwd string) string {
