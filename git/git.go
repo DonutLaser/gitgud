@@ -86,7 +86,7 @@ func (diff *GitDiff) ToString() string {
 // https://stackoverflow.com/questions/27508982/interpreting-git-diff-output
 
 func Status(pathToRepo string) (result []GitStatusEntry) {
-	output := executeGit([]string{"status", "--porcelain"}, pathToRepo)
+	output := executeGit([]string{"status", "--porcelain", "-u"}, pathToRepo)
 	return ParseStatus(output)
 }
 
