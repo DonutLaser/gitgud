@@ -207,7 +207,10 @@ func main() {
 		app.Tick(&input)
 		app.Render(renderer)
 
-		running = !app.Quit
+		// Check if the app requested close only if nobody else requested close
+		if running {
+			running = !app.Quit
+		}
 	}
 
 	app.Close()
