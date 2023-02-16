@@ -3,8 +3,6 @@ package filesystem
 import (
 	"fmt"
 	"os"
-
-	"github.com/sqweek/dialog"
 )
 
 func ReadFile(pathToFile string) (string, bool) {
@@ -29,19 +27,6 @@ func WriteFile(pathToFile string, contents string) bool {
 
 func DeleteFile(pathToFile string) {
 	os.Remove(pathToFile)
-}
-
-func OpenDirectory(title string) (string, bool) {
-	path, err := dialog.Directory().Title(title).Browse()
-	if err != nil {
-		if err != dialog.ErrCancelled {
-			fmt.Printf("Error: %s\n", err.Error())
-		}
-
-		return "", false
-	}
-
-	return path, true
 }
 
 func DoesFileExist(fullPath string) bool {

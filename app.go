@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/DonutLaser/git-client/filesystem"
 	"github.com/DonutLaser/git-client/font"
 	"github.com/DonutLaser/git-client/git"
 	"github.com/DonutLaser/git-client/image"
@@ -263,14 +262,13 @@ func (app *App) handleNormalInput(input *Input) {
 		}
 	} else if input.TypedCharacter == 'O' {
 		if input.Ctrl {
-			path, success := filesystem.OpenDirectory("Select repository folder...")
-			if success {
-				app.setRepository(path)
-				app.Settings.AddRepo(path)
-				app.Settings.SetActiveRepo(path)
+			app.CommandInput.Open("Path to repository folder", func(folderPath string) {
+				app.setRepository(folderPath)
+				app.Settings.AddRepo(folderPath)
+				app.Settings.SetActiveRepo(folderPath)
 				app.Settings.SetActiveBranch(app.Repo.CurrentBranch)
 				app.Settings.Save()
-			}
+			})
 		}
 	} else if input.TypedCharacter == ':' {
 		app.CommandInput.Open("Command", func(string) {
@@ -295,15 +293,14 @@ func (app *App) handleNormalInput(input *Input) {
 		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 	} else if input.TypedCharacter == 'n' {
 		if input.Ctrl {
-			path, success := filesystem.OpenDirectory("Select folder for the new repository...")
-			if success {
-				git.CreateRepository(path)
-				app.setRepository(path)
-				app.Settings.AddRepo(path)
-				app.Settings.SetActiveRepo(path)
+			app.CommandInput.Open("Path to new repository folder", func(folderPath string) {
+				git.CreateRepository(folderPath)
+				app.setRepository(folderPath)
+				app.Settings.AddRepo(folderPath)
+				app.Settings.SetActiveRepo(folderPath)
 				app.Settings.SetActiveBranch(app.Repo.CurrentBranch)
 				app.Settings.Save()
-			}
+			})
 		}
 	} else if input.TypedCharacter == 'w' {
 		if input.Ctrl {
