@@ -140,13 +140,19 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 	renderer.ClipRect(rend, diff.NewRect)
 	renderer.DrawRect(rend, diff.NewRect, sdl.Color{R: 47, G: 46, B: 47, A: 255})
 
+	message := ""
 	if diff.Entry.Type == git.GIT_ENTRY_DELETED {
-		renderer.DrawRectTransparent(rend, diff.NewRect, sdl.Color{R: 169, G: 26, B: 23, A: 49})
+		message = "File was removed"
+	} else if len(diff.Data.Chunks) == 1 && diff.Data.Chunks[0].New.BinaryFile {
+		message = "Cannot show diff of binary file"
+	}
 
-		text := "File was removed"
+	if message != "" {
+		renderer.DrawRectTransparent(rend, diff.NewRect, sdl.Color{R: 82, G: 153, B: 19, A: 49})
+
 		font := app.Fonts["24"]
 
-		textWidth := font.GetStringWidth(text)
+		textWidth := font.GetStringWidth(message)
 		textRect := sdl.Rect{
 			X: diff.NewRect.X + (diff.NewRect.W-textWidth)/2,
 			Y: diff.NewRect.Y + (diff.NewRect.H-font.Size)/2,
@@ -154,7 +160,9 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 			H: font.Size,
 		}
 
-		renderer.DrawText(rend, &font, text, &textRect, sdl.Color{R: 171, G: 171, B: 171, A: 255})
+		renderer.DrawText(rend, &font, message, &textRect, sdl.Color{R: 171, G: 171, B: 171, A: 255})
+
+		renderer.ClipRect(rend, nil)
 		return
 	}
 

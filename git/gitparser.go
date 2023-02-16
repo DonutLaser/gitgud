@@ -62,6 +62,21 @@ func ParseDiff(text string) (result GitDiff) {
 	}
 
 	if chunkStart == -1 {
+		binaryFile := false
+		for _, line := range lines {
+			if strings.HasPrefix(line, "Binary files") {
+				binaryFile = true
+				break
+			}
+		}
+
+		if binaryFile {
+			result.Chunks = append(result.Chunks, GitDiffChunk{
+				Old: GitDiffFile{BinaryFile: true},
+				New: GitDiffFile{BinaryFile: true},
+			})
+		}
+
 		return
 	}
 

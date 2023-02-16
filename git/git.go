@@ -39,9 +39,10 @@ type GitDiffChunk struct {
 }
 
 type GitDiffFile struct {
-	StartLine uint32
-	EndLine   uint32
-	Lines     []GitDiffLine
+	StartLine  uint32
+	EndLine    uint32
+	Lines      []GitDiffLine
+	BinaryFile bool
 }
 
 type GitDiffLine struct {
