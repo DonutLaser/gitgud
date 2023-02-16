@@ -45,6 +45,8 @@ type App struct {
 
 	Fonts map[string]font.Font
 	Icons map[string]image.Image
+
+	Quit bool
 }
 
 func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (result App) {
@@ -80,7 +82,29 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 
 	result.Refresh()
 
+	result.Quit = false
+
 	return
+}
+
+func (app *App) Close() {
+	font := app.Fonts["12"]
+	font.Unload()
+	font = app.Fonts["14"]
+	font.Unload()
+	font = app.Fonts["16"]
+	font.Unload()
+	font = app.Fonts["24"]
+	font.Unload()
+
+	icon := app.Icons["repo"]
+	icon.Unload()
+	icon = app.Icons["branch"]
+	icon.Unload()
+	icon = app.Icons["entry_off"]
+	icon.Unload()
+	icon = app.Icons["entry_on"]
+	icon.Unload()
 }
 
 func (app *App) Resize(windowWidth int32, windowHeight int32) {
@@ -272,6 +296,10 @@ func (app *App) handleNormalInput(input *Input) {
 				app.Settings.SetActiveBranch(app.Repo.CurrentBranch)
 				app.Settings.Save()
 			}
+		}
+	} else if input.TypedCharacter == 'w' {
+		if input.Ctrl {
+			app.Quit = true
 		}
 	}
 }

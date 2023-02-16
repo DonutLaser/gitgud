@@ -206,5 +206,9 @@ func main() {
 
 		app.Tick(&input)
 		app.Render(renderer)
+
+		running = !app.Quit
 	}
+
+	app.Close()
 }
