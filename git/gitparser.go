@@ -68,7 +68,7 @@ func ParseDiff(text string) (result GitDiff) {
 	lines = lines[chunkStart:]
 
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
+		trimmed := strings.ReplaceAll(strings.TrimSpace(line), "\t", "    ")
 		if trimmed == "" {
 			continue
 		}

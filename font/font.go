@@ -30,7 +30,7 @@ func LoadFont(path string, size int32) (result Font) {
 }
 
 func (font *Font) GetStringWidth(text string) int32 {
-	return int32(int32(len(text)) * font.CharacterWidth)
+	return int32(len(text)) * font.CharacterWidth
 }
 
 func (font *Font) Unload() {
