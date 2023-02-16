@@ -14,6 +14,8 @@ type DiffView struct {
 
 	Data  git.GitDiff
 	Entry git.GitStatusEntry
+
+	ScrollOffset int32
 }
 
 func NewDiffView(windowWidth int32, windowHeight int32) (result DiffView) {
@@ -42,12 +44,24 @@ func (diff *DiffView) ShowDiff(data git.GitDiff, entry git.GitStatusEntry) {
 	diff.Entry = entry
 }
 
+func (diff *DiffView) ScrollDown() {
+	diff.ScrollOffset -= 23
+}
+
+func (diff *DiffView) ScrollUp() {
+	diff.ScrollOffset += 23
+	if diff.ScrollOffset > 0 {
+		diff.ScrollOffset = 0
+	}
+}
+
 func (diff *DiffView) Render(rend *sdl.Renderer, app *App) {
 	diff.renderOld(rend, app)
 	diff.renderNew(rend, app)
 }
 
 func (diff *DiffView) renderOld(rend *sdl.Renderer, app *App) {
+	renderer.ClipRect(rend, diff.OldRect)
 	renderer.DrawRect(rend, diff.OldRect, sdl.Color{R: 47, G: 46, B: 47, A: 255})
 
 	if len(diff.Data.Chunks) == 1 && diff.Data.Chunks[0].Old.StartLine == 0 && diff.Data.Chunks[0].Old.EndLine == 0 {
@@ -67,7 +81,7 @@ func (diff *DiffView) renderOld(rend *sdl.Renderer, app *App) {
 	var lineHeight int32 = 23
 
 	for _, chunk := range diff.Data.Chunks {
-		lineTop := diff.OldRect.Y
+		lineTop := diff.OldRect.Y + diff.ScrollOffset
 		lineNumber := chunk.Old.StartLine
 
 		for _, line := range chunk.Old.Lines {
@@ -118,9 +132,12 @@ func (diff *DiffView) renderOld(rend *sdl.Renderer, app *App) {
 			lineNumber += 1
 		}
 	}
+
+	renderer.ClipRect(rend, nil)
 }
 
 func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
+	renderer.ClipRect(rend, diff.NewRect)
 	renderer.DrawRect(rend, diff.NewRect, sdl.Color{R: 47, G: 46, B: 47, A: 255})
 
 	if diff.Entry.Type == git.GIT_ENTRY_DELETED {
@@ -154,7 +171,7 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 	var lineHeight int32 = 23
 
 	for _, chunk := range diff.Data.Chunks {
-		lineTop := diff.NewRect.Y
+		lineTop := diff.NewRect.Y + diff.ScrollOffset
 		lineNumber := chunk.New.StartLine
 
 		for _, line := range chunk.New.Lines {
@@ -205,6 +222,8 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 			lineNumber += 1
 		}
 	}
+
+	renderer.ClipRect(rend, nil)
 }
 
 func (diff *DiffView) diffLineTypeToColor(t git.GitDiffLineType) sdl.Color {

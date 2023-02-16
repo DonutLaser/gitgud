@@ -52,3 +52,7 @@ func DrawImage(renderer *sdl.Renderer, img *image.Image, position *sdl.Point, co
 	img.Data.SetColorMod(color.R, color.G, color.B)
 	renderer.Copy(img.Data, nil, &rect)
 }
+
+func ClipRect(renderer *sdl.Renderer, rect *sdl.Rect) {
+	renderer.SetClipRect(rect)
+}

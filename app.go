@@ -210,6 +210,10 @@ func (app *App) handleNormalInput(input *Input) {
 			activeEntry := app.Staging.GetActiveEntry()
 			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 		}
+	} else if input.TypedCharacter == 'L' {
+		app.DiffView.ScrollDown()
+	} else if input.TypedCharacter == 'H' {
+		app.DiffView.ScrollUp()
 	} else if input.TypedCharacter == 'v' {
 		if len(app.Repo.Changes) > 0 {
 			app.Staging.ToggleEntrySelected()
