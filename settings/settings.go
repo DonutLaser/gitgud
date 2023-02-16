@@ -48,7 +48,6 @@ func (settings *Settings) Save() {
 	sb.WriteString(fmt.Sprintf("active_repo=%s\n", settings.ActiveRepo))
 	sb.WriteString(fmt.Sprintf("active_branch=%s\n", settings.ActiveBranch))
 
-	fmt.Println("Saving settings...")
 	filesystem.WriteFile(getSettingsPath(), sb.String())
 
 }
