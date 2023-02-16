@@ -199,18 +199,26 @@ func (app *App) setMode(mode AppMode) {
 
 func (app *App) handleNormalInput(input *Input) {
 	if input.TypedCharacter == 'j' {
-		app.Staging.GoToNextEntry()
-		activeEntry := app.Staging.GetActiveEntry()
+		if len(app.Repo.Changes) > 0 {
+			app.Staging.GoToNextEntry()
+			activeEntry := app.Staging.GetActiveEntry()
 
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+		}
 	} else if input.TypedCharacter == 'k' {
-		app.Staging.GoToPrevEntry()
-		activeEntry := app.Staging.GetActiveEntry()
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+		if len(app.Repo.Changes) > 0 {
+			app.Staging.GoToPrevEntry()
+			activeEntry := app.Staging.GetActiveEntry()
+			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+		}
 	} else if input.TypedCharacter == 'v' {
-		app.Staging.ToggleEntrySelected()
+		if len(app.Repo.Changes) > 0 {
+			app.Staging.ToggleEntrySelected()
+		}
 	} else if input.TypedCharacter == 'V' {
-		app.Staging.ToggleAllEntriesSelected()
+		if len(app.Repo.Changes) > 0 {
+			app.Staging.ToggleAllEntriesSelected()
+		}
 	} else if input.TypedCharacter == 'd' {
 		app.setMode(MODE_DELETE)
 	} else if input.TypedCharacter == 's' {
@@ -311,20 +319,22 @@ func (app *App) handleDeleteInput(input *Input) {
 	}
 
 	if input.TypedCharacter == 'd' {
-		activeEntry := app.Staging.GetActiveEntry()
-		if activeEntry.Type == git.GIT_ENTRY_NEW {
-			// `git restore`` doesn't work on new files so we manually delete them
-			// because that's what `git restore` would do anyway
-			os.Remove(fmt.Sprintf("%s/%s", app.Repo.Path, activeEntry.Filename))
-		} else {
-			git.Discard(activeEntry.Filename, app.Repo.Path)
+		if len(app.Repo.Changes) > 0 {
+			activeEntry := app.Staging.GetActiveEntry()
+			if activeEntry.Type == git.GIT_ENTRY_NEW {
+				// `git restore`` doesn't work on new files so we manually delete them
+				// because that's what `git restore` would do anyway
+				os.Remove(fmt.Sprintf("%s/%s", app.Repo.Path, activeEntry.Filename))
+			} else {
+				git.Discard(activeEntry.Filename, app.Repo.Path)
+			}
+
+			app.Repo.Changes = git.Status(app.Repo.Path)
+			app.Staging.ShowEntries(app.Repo.Changes)
+
+			activeEntry = app.Staging.GetActiveEntry()
+			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 		}
-
-		app.Repo.Changes = git.Status(app.Repo.Path)
-		app.Staging.ShowEntries(app.Repo.Changes)
-
-		activeEntry = app.Staging.GetActiveEntry()
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 
 		app.setMode(MODE_NORMAL)
 	} else if input.TypedCharacter == 'a' {
