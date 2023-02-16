@@ -30,13 +30,13 @@ type Repo struct {
 }
 
 type App struct {
-	Statusbar Statusbar
-	Staging   Staging
-	DiffView  DiffView
-	Search    QuickSearch
-	Commit    Commit
-	NoRepos   NoRepos
-	NoChanges NoChanges
+	Statusbar    Statusbar
+	Staging      Staging
+	DiffView     DiffView
+	Search       QuickSearch
+	CommandInput CommandInput
+	NoRepos      NoRepos
+	NoChanges    NoChanges
 
 	Mode     AppMode
 	Repo     Repo
@@ -52,7 +52,7 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 	result.Staging = NewStaging(windowHeight)
 	result.DiffView = NewDiffView(windowWidth, windowHeight)
 	result.Search = NewQuickSearch(windowWidth, windowHeight)
-	result.Commit = NewCommit(windowWidth, windowHeight)
+	result.CommandInput = NewCommandInput(windowWidth, windowHeight)
 	result.NoRepos = NewNoRepos(windowWidth, windowHeight)
 	result.NoChanges = NewNoChanges(windowWidth, windowHeight)
 
@@ -62,6 +62,7 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 	result.Fonts["12"] = font.LoadFont("./assets/fonts/consola.ttf", 12)
 	result.Fonts["14"] = font.LoadFont("./assets/fonts/consola.ttf", 14)
 	result.Fonts["16"] = font.LoadFont("./assets/fonts/consola.ttf", 16)
+	result.Fonts["24"] = font.LoadFont("./assets/fonts/consola.ttf", 24)
 
 	result.Icons = make(map[string]image.Image)
 	result.Icons["repo"] = image.LoadImage("./assets/icons/icon_repo.png", renderer)
@@ -70,6 +71,12 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 	result.Icons["entry_on"] = image.LoadImage("./assets/icons/icon_entry_on.png", renderer)
 
 	result.Settings = settings.LoadSettings()
+
+	if result.Settings.ActiveRepo != "" {
+		result.setRepository(result.Settings.ActiveRepo)
+	} else if len(result.Settings.RepoList) > 0 {
+		result.setRepository(result.Settings.RepoList[0])
+	}
 
 	result.Refresh()
 
@@ -81,16 +88,24 @@ func (app *App) Resize(windowWidth int32, windowHeight int32) {
 	app.Staging.Resize(windowHeight)
 	app.DiffView.Resize(windowWidth, windowHeight)
 	app.Search.Resize(windowWidth, windowHeight)
-	app.Commit.Resize(windowWidth, windowHeight)
+	app.CommandInput.Resize(windowWidth, windowHeight)
 	app.NoRepos.Resize(windowWidth, windowHeight)
 	app.NoChanges.Resize(windowWidth, windowHeight)
 }
 
 func (app *App) Refresh() {
-	if app.Settings.ActiveRepo != "" && app.Repo.Path != app.Settings.ActiveRepo {
-		app.setRepository(app.Settings.ActiveRepo)
-	} else if len(app.Settings.RepoList) > 0 && app.Repo.Path != app.Settings.RepoList[0] {
-		app.setRepository(app.Settings.RepoList[0])
+	if app.Settings.ActiveRepo == "" {
+		return
+	}
+
+	app.Repo.Branches = git.ListBranches(app.Repo.Path)
+	app.Repo.Changes = git.Status(app.Repo.Path)
+
+	app.Staging.ShowEntries(app.Repo.Changes)
+
+	if len(app.Repo.Changes) > 0 {
+		activeEntry := app.Staging.GetActiveEntry()
+		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 	}
 }
 
@@ -101,8 +116,8 @@ func (app *App) Tick(input *Input) {
 		return
 	}
 
-	if app.Commit.Active {
-		app.Commit.Tick(input)
+	if app.CommandInput.Active {
+		app.CommandInput.Tick(input)
 
 		return
 	}
@@ -148,7 +163,7 @@ func (app *App) Render(renderer *sdl.Renderer) {
 		}
 
 		app.Search.Render(renderer, app)
-		app.Commit.Render(renderer, app)
+		app.CommandInput.Render(renderer, app)
 	}
 
 	renderer.Present()
@@ -163,11 +178,11 @@ func (app *App) handleNormalInput(input *Input) {
 		app.Staging.GoToNextEntry()
 		activeEntry := app.Staging.GetActiveEntry()
 
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
+		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 	} else if input.TypedCharacter == 'k' {
 		app.Staging.GoToPrevEntry()
 		activeEntry := app.Staging.GetActiveEntry()
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
+		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 	} else if input.TypedCharacter == 'v' {
 		app.Staging.ToggleEntrySelected()
 	} else if input.TypedCharacter == 'V' {
@@ -198,8 +213,9 @@ func (app *App) handleNormalInput(input *Input) {
 					repo := app.Settings.RepoList[index]
 
 					app.setRepository(repo)
-					app.Settings.SetActiveRepo(repo, false)
-					app.Settings.SetActiveBranch(app.Repo.CurrentBranch, true)
+					app.Settings.SetActiveRepo(repo)
+					app.Settings.SetActiveBranch(app.Repo.CurrentBranch)
+					app.Settings.Save()
 				})
 			} else {
 				app.Search.Open("Branch name", app.Repo.Branches, SEARCH_INCLUDES, func(branchName string) {
@@ -208,40 +224,55 @@ func (app *App) handleNormalInput(input *Input) {
 
 					git.SwitchToBranch(app.Repo.CurrentBranch, app.Repo.Path)
 
-					app.Settings.SetActiveBranch(branchName, true)
+					app.Settings.SetActiveBranch(branchName)
+					app.Settings.Save()
 				})
 			}
 		}
 	} else if input.TypedCharacter == 'O' {
 		if input.Ctrl {
-			path, success := filesystem.OpenDirectory()
+			path, success := filesystem.OpenDirectory("Select repository folder...")
 			if success {
 				app.setRepository(path)
-				app.Settings.AddRepo(path, false)
-				app.Settings.SetActiveRepo(path, false)
-				app.Settings.SetActiveBranch(app.Repo.CurrentBranch, true)
+				app.Settings.AddRepo(path)
+				app.Settings.SetActiveRepo(path)
+				app.Settings.SetActiveBranch(app.Repo.CurrentBranch)
+				app.Settings.Save()
 			}
 		}
 	} else if input.TypedCharacter == ':' {
-		// Run arbitrary git command
+		app.CommandInput.Open("Command", func(string) {
+		})
 	} else if input.TypedCharacter == '<' {
 		if input.Ctrl {
 			settings.OpenSettingsInExternalProgram()
 		}
 	} else if input.TypedCharacter == 'I' {
-		app.Commit.Open(func(message string) {
+		app.CommandInput.Open("Commit message", func(message string) {
 			app.Repo.Changes = git.Commit(app.Repo.Changes, message, app.Repo.Path)
 			app.Staging.ShowEntries(app.Repo.Changes)
 
 			activeEntry := app.Staging.GetActiveEntry()
-			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
+			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 		})
 	} else if input.TypedCharacter == 'u' {
 		app.Repo.Changes = git.UndoLastCommit(app.Repo.Path)
 		app.Staging.ShowEntries(app.Repo.Changes)
 
 		activeEntry := app.Staging.GetActiveEntry()
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
+		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+	} else if input.TypedCharacter == 'n' {
+		if input.Ctrl {
+			path, success := filesystem.OpenDirectory("Select folder for the new repository...")
+			if success {
+				git.CreateRepository(path)
+				app.setRepository(path)
+				app.Settings.AddRepo(path)
+				app.Settings.SetActiveRepo(path)
+				app.Settings.SetActiveBranch(app.Repo.CurrentBranch)
+				app.Settings.Save()
+			}
+		}
 	}
 }
 
@@ -265,7 +296,7 @@ func (app *App) handleDeleteInput(input *Input) {
 		app.Staging.ShowEntries(app.Repo.Changes)
 
 		activeEntry = app.Staging.GetActiveEntry()
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
+		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
 
 		app.setMode(MODE_NORMAL)
 	} else if input.TypedCharacter == 'a' {
@@ -301,6 +332,8 @@ func (app *App) setRepository(repoPath string) {
 
 	app.Staging.ShowEntries(app.Repo.Changes)
 
-	activeEntry := app.Staging.GetActiveEntry()
-	app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path))
+	if len(app.Repo.Changes) > 0 {
+		activeEntry := app.Staging.GetActiveEntry()
+		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+	}
 }

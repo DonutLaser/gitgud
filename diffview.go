@@ -12,7 +12,8 @@ type DiffView struct {
 	OldRect *sdl.Rect
 	NewRect *sdl.Rect
 
-	Data git.GitDiff
+	Data  git.GitDiff
+	Entry git.GitStatusEntry
 }
 
 func NewDiffView(windowWidth int32, windowHeight int32) (result DiffView) {
@@ -36,8 +37,9 @@ func (diff *DiffView) Resize(windowWidth int32, windowHeight int32) {
 	diff.NewRect.H = height
 }
 
-func (diff *DiffView) ShowDiff(data git.GitDiff) {
+func (diff *DiffView) ShowDiff(data git.GitDiff, entry git.GitStatusEntry) {
 	diff.Data = data
+	diff.Entry = entry
 }
 
 func (diff *DiffView) Render(rend *sdl.Renderer, app *App) {
@@ -121,6 +123,24 @@ func (diff *DiffView) renderOld(rend *sdl.Renderer, app *App) {
 func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 	renderer.DrawRect(rend, diff.NewRect, sdl.Color{R: 47, G: 46, B: 47, A: 255})
 
+	if diff.Entry.Type == git.GIT_ENTRY_DELETED {
+		renderer.DrawRectTransparent(rend, diff.NewRect, sdl.Color{R: 169, G: 26, B: 23, A: 49})
+
+		text := "File was removed"
+		font := app.Fonts["24"]
+
+		textWidth := font.GetStringWidth(text)
+		textRect := sdl.Rect{
+			X: diff.NewRect.X + (diff.NewRect.W-textWidth)/2,
+			Y: diff.NewRect.Y + (diff.NewRect.H-font.Size)/2,
+			W: textWidth,
+			H: font.Size,
+		}
+
+		renderer.DrawText(rend, &font, text, &textRect, sdl.Color{R: 171, G: 171, B: 171, A: 255})
+		return
+	}
+
 	numbersRect := sdl.Rect{
 		X: diff.NewRect.X,
 		Y: diff.NewRect.Y,
@@ -186,71 +206,6 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 		}
 	}
 }
-
-// func (diff *DiffView) renderChunk(file git.GitDiffFile, parentRect *sdl.Rect, rand *sdl.Renderer, app *App) {
-// 	if file.StartLine == 0 && file.EndLine == 0 {
-// 		// this means that the diff is for the newly created file which actually does not have any diff
-// 		return
-// 	}
-
-// 	mainFont := app.Fonts["12"]
-
-// 	lineTop := top
-
-// 	for _, line := range file.Lines {
-// 		if line.Type != git.GIT_LINE_UNMODIFIED {
-// 			bgRect := sdl.Rect{
-// 				X: left,
-// 				Y: lineTop,
-// 				W:
-// 			}
-// 		}
-// 	}
-// }
-
-// func (diff *DiffView) renderChunk(file git.GitDiffFile, top int32, left int32, rend *sdl.Renderer, app *App) {
-// 	headerRect := sdl.Rect{
-// 		X: left,
-// 		Y: top,
-// 		W: diff.Rect.W/2 - 1,
-// 		H: 12,
-// 	}
-// 	renderer.DrawRect(rend, &headerRect, sdl.Color{R: 61, G: 64, B: 71, A: 255})
-
-// 	if file.StartLine == 0 && file.EndLine == 0 {
-// 		// This means that the diff is for the newly created file which actually does not have any
-// 		// diff
-// 		return
-// 	}
-
-// 	mainFont := app.Fonts["14"]
-
-// 	lineTop := headerRect.Y + headerRect.H
-
-// 	for _, line := range file.Lines {
-// 		bgRect := sdl.Rect{
-// 			X: headerRect.X,
-// 			Y: lineTop,
-// 			W: headerRect.W,
-// 			H: mainFont.Size + 4,
-// 		}
-// 		renderer.DrawRect(rend, &bgRect, sdl.Color{R: 32, G: 33, B: 35, A: 255})
-
-// 		lineWidth := mainFont.GetStringWidth(line.Text)
-// 		lineRect := sdl.Rect{
-// 			X: bgRect.X + 2,
-// 			Y: bgRect.Y + (bgRect.H-mainFont.Size)/2,
-// 			W: lineWidth,
-// 			H: mainFont.Size,
-// 		}
-
-// 		color := diff.diffLineTypeToColor(line.Type)
-
-// 		renderer.DrawText(rend, &mainFont, line.Text, &lineRect, color)
-
-// 		lineTop += lineRect.H + 2
-// 	}
-// }
 
 func (diff *DiffView) diffLineTypeToColor(t git.GitDiffLineType) sdl.Color {
 	switch t {

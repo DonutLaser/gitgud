@@ -15,7 +15,7 @@ type Settings struct {
 	ActiveBranch string
 }
 
-func (settings *Settings) AddRepo(repoPath string, save bool) {
+func (settings *Settings) AddRepo(repoPath string) {
 	found := false
 	for _, repo := range settings.RepoList {
 		if repo == repoPath {
@@ -29,36 +29,28 @@ func (settings *Settings) AddRepo(repoPath string, save bool) {
 	}
 
 	settings.RepoList = append(settings.RepoList, repoPath)
-
-	if save {
-		saveSettings(*settings)
-	}
 }
 
-func (settings *Settings) SetActiveRepo(repoPath string, save bool) {
-	if settings.ActiveRepo == repoPath {
-		// Avoid write to disk when nothing has changed
-		return
-	}
-
+func (settings *Settings) SetActiveRepo(repoPath string) {
 	settings.ActiveRepo = repoPath
-
-	if save {
-		saveSettings(*settings)
-	}
 }
 
-func (settings *Settings) SetActiveBranch(branchName string, save bool) {
-	if settings.ActiveBranch == branchName {
-		// Avoid write to disk when nothing has changed
-		return
-	}
-
+func (settings *Settings) SetActiveBranch(branchName string) {
 	settings.ActiveBranch = branchName
+}
 
-	if save {
-		saveSettings(*settings)
+func (settings *Settings) Save() {
+	var sb strings.Builder
+	for _, repo := range settings.RepoList {
+		sb.WriteString(fmt.Sprintf("repo=%s\n", repo))
 	}
+
+	sb.WriteString(fmt.Sprintf("active_repo=%s\n", settings.ActiveRepo))
+	sb.WriteString(fmt.Sprintf("active_branch=%s\n", settings.ActiveBranch))
+
+	fmt.Println("Saving settings...")
+	filesystem.WriteFile(getSettingsPath(), sb.String())
+
 }
 
 func OpenSettingsInExternalProgram() {
@@ -70,7 +62,7 @@ func LoadSettings() (result Settings) {
 	settingsPath := getSettingsPath()
 
 	if !filesystem.DoesFileExist(settingsPath) {
-		saveSettings(result)
+		result.Save()
 		return
 	}
 
@@ -99,18 +91,6 @@ func LoadSettings() (result Settings) {
 	}
 
 	return
-}
-
-func saveSettings(settings Settings) {
-	var sb strings.Builder
-	for _, repo := range settings.RepoList {
-		sb.WriteString(fmt.Sprintf("repo=%s\n", repo))
-	}
-
-	sb.WriteString(fmt.Sprintf("active_repo=%s\n", settings.ActiveRepo))
-	sb.WriteString(fmt.Sprintf("active_branch=%s\n", settings.ActiveBranch))
-
-	filesystem.WriteFile(getSettingsPath(), sb.String())
 }
 
 func getKeyValuePair(text string) (string, string) {

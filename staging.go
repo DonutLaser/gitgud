@@ -17,7 +17,7 @@ type Staging struct {
 func NewStaging(windowHeight int32) (result Staging) {
 	result.Rect = &sdl.Rect{X: 0, Y: 24 + 2, W: 280, H: windowHeight - 24 - 2}
 
-	result.ActiveEntry = 0
+	result.ActiveEntry = -1
 
 	return
 }
@@ -28,7 +28,9 @@ func (staging *Staging) Resize(windowHeight int32) {
 
 func (staging *Staging) ShowEntries(entries []git.GitStatusEntry) {
 	staging.Entries = entries
-	staging.ActiveEntry = 0
+	if len(staging.Entries) > 0 {
+		staging.ActiveEntry = 0
+	}
 	staging.AllSelected = true
 }
 

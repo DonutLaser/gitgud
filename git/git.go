@@ -154,6 +154,10 @@ func UndoLastCommit(pathToRepo string) (result []GitStatusEntry) {
 	return Status(pathToRepo)
 }
 
+func CreateRepository(pathToRepo string) {
+	executeGit([]string{"init"}, pathToRepo)
+}
+
 func diffNew(filename string, pathToRepo string) (result GitDiff) {
 	output := executeGit([]string{"diff", "--no-index", "/dev/null", filename}, pathToRepo)
 	return ParseDiff(output)
