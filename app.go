@@ -265,6 +265,10 @@ func (app *App) handleNormalInput(input *Input) {
 				app.Settings.Save()
 			})
 		}
+	} else if input.TypedCharacter == 'O' {
+		if input.Ctrl {
+			open.Start(app.Settings.ActiveRepo)
+		}
 	} else if input.TypedCharacter == ':' {
 		app.CommandInput.Open("Command", func(string) {
 		})
