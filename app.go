@@ -9,6 +9,7 @@ import (
 	"github.com/DonutLaser/git-client/git"
 	"github.com/DonutLaser/git-client/image"
 	"github.com/DonutLaser/git-client/settings"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -78,8 +79,6 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 	} else if len(result.Settings.RepoList) > 0 {
 		result.setRepository(result.Settings.RepoList[0])
 	}
-
-	result.Refresh()
 
 	result.Quit = false
 
@@ -155,18 +154,10 @@ func (app *App) Tick(input *Input) {
 		panic("Unreachable")
 	}
 
-	// ctrl + alt + p to select repo
-	// ctrl + p to select branch
-	// ctrl + n to new repo
-	// ctrl + o to import existing repo
 	// ctrl + alt + o to clone repo
 	// ctrl + shift + o to open repo folder
 	// ctrl + r to open pull request
-	// ctrl + w to close app
 	// ctrl + shift + n to new branch
-	// shift + J to scroll diff down
-	// shift + K to scroll diff up
-	// i to enter commit message
 }
 
 func (app *App) Render(renderer *sdl.Renderer) {
@@ -264,7 +255,7 @@ func (app *App) handleNormalInput(input *Input) {
 				})
 			}
 		}
-	} else if input.TypedCharacter == 'O' {
+	} else if input.TypedCharacter == 'o' {
 		if input.Ctrl {
 			app.CommandInput.Open("Path to repository folder", func(folderPath string) {
 				app.setRepository(folderPath)

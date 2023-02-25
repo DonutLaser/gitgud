@@ -21,6 +21,7 @@ const (
 	GIT_LINE_UNMODIFIED GitDiffLineType = iota
 	GIT_LINE_NEW
 	GIT_LINE_REMOVED
+	GIT_LINE_EMPTY
 )
 
 type GitStatusEntry struct {

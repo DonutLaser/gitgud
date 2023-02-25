@@ -82,8 +82,12 @@ func ParseDiff(text string) (result GitDiff) {
 
 	lines = lines[chunkStart:]
 
+	tempChunksOld := make([][]string, 0)
+	tempChunksNew := make([][]string, 0)
+
+	// First parse the chunks into their respective sides without turning them into GitDiffLines
 	for _, line := range lines {
-		trimmed := strings.ReplaceAll(strings.TrimSpace(line), "\t", "    ")
+		trimmed := strings.ReplaceAll(line, "\t", "    ")
 		if trimmed == "" {
 			continue
 		}
@@ -96,30 +100,80 @@ func ParseDiff(text string) (result GitDiff) {
 			nextChunk.Old.StartLine, nextChunk.Old.EndLine, nextChunk.New.StartLine, nextChunk.New.EndLine = parseChunkRange(trimmed)
 
 			result.Chunks = append(result.Chunks, nextChunk)
+			tempChunksOld = append(tempChunksOld, []string{})
+			tempChunksNew = append(tempChunksNew, []string{})
 		} else if strings.HasPrefix(trimmed, "+") {
-			lastChunk := len(result.Chunks) - 1
-			result.Chunks[lastChunk].New.Lines = append(result.Chunks[lastChunk].New.Lines, GitDiffLine{
-				Text: strings.TrimPrefix(trimmed, "+"),
-				Type: GIT_LINE_NEW,
-			})
+			lastChunk := len(tempChunksNew) - 1
+			tempChunksNew[lastChunk] = append(tempChunksNew[lastChunk], trimmed)
 		} else if strings.HasPrefix(trimmed, "-") {
-			lastChunk := len(result.Chunks) - 1
-			result.Chunks[lastChunk].Old.Lines = append(result.Chunks[lastChunk].Old.Lines, GitDiffLine{
-				Text: strings.TrimPrefix(trimmed, "-"),
-				Type: GIT_LINE_REMOVED,
-			})
+			lastChunk := len(tempChunksOld) - 1
+			tempChunksOld[lastChunk] = append(tempChunksOld[lastChunk], trimmed)
 		} else if strings.HasPrefix(trimmed, "\\") {
 			// Ignore these kinds of lines
 		} else {
-			lastChunk := len(result.Chunks) - 1
-			result.Chunks[lastChunk].Old.Lines = append(result.Chunks[lastChunk].Old.Lines, GitDiffLine{
-				Text: trimmed,
-				Type: GIT_LINE_UNMODIFIED,
-			})
-			result.Chunks[lastChunk].New.Lines = append(result.Chunks[lastChunk].New.Lines, GitDiffLine{
-				Text: trimmed,
-				Type: GIT_LINE_UNMODIFIED,
-			})
+			lastChunk := len(tempChunksNew) - 1
+			tempChunksNew[lastChunk] = append(tempChunksNew[lastChunk], trimmed)
+			tempChunksOld[lastChunk] = append(tempChunksOld[lastChunk], trimmed)
+		}
+	}
+
+	// Now produce proper chunks
+	for chunkIndex := 0; chunkIndex < len(tempChunksOld); chunkIndex += 1 {
+		oldIndex := 0
+		newIndex := 0
+
+		for true {
+			if oldIndex < len(tempChunksOld[chunkIndex]) && newIndex < len(tempChunksNew[chunkIndex]) && !strings.HasPrefix(tempChunksOld[chunkIndex][oldIndex], "-") && !strings.HasPrefix(tempChunksNew[chunkIndex][newIndex], "+") {
+				result.Chunks[chunkIndex].New.Lines = append(result.Chunks[chunkIndex].New.Lines, GitDiffLine{
+					Text: tempChunksNew[chunkIndex][newIndex],
+					Type: GIT_LINE_UNMODIFIED,
+				})
+				result.Chunks[chunkIndex].Old.Lines = append(result.Chunks[chunkIndex].Old.Lines, GitDiffLine{
+					Text: tempChunksOld[chunkIndex][oldIndex],
+					Type: GIT_LINE_UNMODIFIED,
+				})
+
+				oldIndex += 1
+				newIndex += 1
+			} else if oldIndex < len(tempChunksOld[chunkIndex]) && newIndex < len(tempChunksNew[chunkIndex]) && strings.HasPrefix(tempChunksOld[chunkIndex][oldIndex], "-") && strings.HasPrefix(tempChunksNew[chunkIndex][newIndex], "+") {
+				result.Chunks[chunkIndex].New.Lines = append(result.Chunks[chunkIndex].New.Lines, GitDiffLine{
+					Text: strings.Replace(tempChunksNew[chunkIndex][newIndex], "+", " ", 1),
+					Type: GIT_LINE_NEW,
+				})
+				result.Chunks[chunkIndex].Old.Lines = append(result.Chunks[chunkIndex].Old.Lines, GitDiffLine{
+					Text: strings.Replace(tempChunksOld[chunkIndex][oldIndex], "-", " ", 1),
+					Type: GIT_LINE_REMOVED,
+				})
+
+				oldIndex += 1
+				newIndex += 1
+			} else if newIndex < len(tempChunksNew[chunkIndex]) && (oldIndex >= len(tempChunksOld[chunkIndex]) || !strings.HasPrefix(tempChunksOld[chunkIndex][oldIndex], "-")) && strings.HasPrefix(tempChunksNew[chunkIndex][newIndex], "+") {
+				result.Chunks[chunkIndex].New.Lines = append(result.Chunks[chunkIndex].New.Lines, GitDiffLine{
+					Text: strings.Replace(tempChunksNew[chunkIndex][newIndex], "+", " ", 1),
+					Type: GIT_LINE_NEW,
+				})
+				result.Chunks[chunkIndex].Old.Lines = append(result.Chunks[chunkIndex].Old.Lines, GitDiffLine{
+					Text: "",
+					Type: GIT_LINE_EMPTY,
+				})
+
+				newIndex += 1
+			} else if oldIndex < len(tempChunksOld[chunkIndex]) && strings.HasPrefix(tempChunksOld[chunkIndex][oldIndex], "-") && (newIndex >= len(tempChunksNew[chunkIndex]) || !strings.HasPrefix(tempChunksNew[chunkIndex][newIndex], "+")) {
+				result.Chunks[chunkIndex].Old.Lines = append(result.Chunks[chunkIndex].Old.Lines, GitDiffLine{
+					Text: strings.Replace(tempChunksOld[chunkIndex][oldIndex], "-", " ", 1),
+					Type: GIT_LINE_REMOVED,
+				})
+				result.Chunks[chunkIndex].New.Lines = append(result.Chunks[chunkIndex].New.Lines, GitDiffLine{
+					Text: "",
+					Type: GIT_LINE_EMPTY,
+				})
+
+				oldIndex += 1
+			}
+
+			if oldIndex >= len(tempChunksOld[chunkIndex]) && newIndex >= len(tempChunksNew[chunkIndex]) {
+				break
+			}
 		}
 	}
 

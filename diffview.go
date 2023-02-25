@@ -79,13 +79,23 @@ func (diff *DiffView) renderOld(rend *sdl.Renderer, app *App) {
 	mainFont := app.Fonts["12"]
 
 	var lineHeight int32 = 23
+	var separatorHeight int32 = 12
 
+	chunkStart := diff.NewRect.Y + diff.ScrollOffset
+	lineTop := chunkStart + separatorHeight
 	for _, chunk := range diff.Data.Chunks {
-		lineTop := diff.OldRect.Y + diff.ScrollOffset
 		lineNumber := chunk.Old.StartLine
 
+		separatorRect := sdl.Rect{
+			X: diff.OldRect.X,
+			Y: chunkStart,
+			W: diff.OldRect.W,
+			H: separatorHeight,
+		}
+		renderer.DrawRect(rend, &separatorRect, sdl.Color{R: 63, G: 63, B: 63, A: 255})
+
 		for _, line := range chunk.Old.Lines {
-			if line.Type != git.GIT_LINE_UNMODIFIED {
+			if line.Type != git.GIT_LINE_UNMODIFIED && line.Type != git.GIT_LINE_EMPTY {
 				bgRect := sdl.Rect{
 					X: numbersRect.X + numbersRect.W,
 					Y: lineTop,
@@ -131,6 +141,9 @@ func (diff *DiffView) renderOld(rend *sdl.Renderer, app *App) {
 
 			lineNumber += 1
 		}
+
+		chunkStart = lineTop
+		lineTop += separatorHeight
 	}
 
 	renderer.ClipRect(rend, nil)
@@ -177,17 +190,27 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 	mainFont := app.Fonts["12"]
 
 	var lineHeight int32 = 23
+	var separatorHeight int32 = 12
 
+	chunkStart := diff.NewRect.Y + diff.ScrollOffset
+	lineTop := chunkStart + separatorHeight
 	for _, chunk := range diff.Data.Chunks {
-		lineTop := diff.NewRect.Y + diff.ScrollOffset
 		lineNumber := chunk.New.StartLine
 
+		separatorRect := sdl.Rect{
+			X: diff.NewRect.X,
+			Y: chunkStart,
+			W: diff.NewRect.W,
+			H: separatorHeight,
+		}
+		renderer.DrawRect(rend, &separatorRect, sdl.Color{R: 63, G: 63, B: 63, A: 255})
+
 		for _, line := range chunk.New.Lines {
-			if line.Type != git.GIT_LINE_UNMODIFIED {
+			if line.Type != git.GIT_LINE_UNMODIFIED && line.Type != git.GIT_LINE_EMPTY {
 				bgRect := sdl.Rect{
 					X: numbersRect.X + numbersRect.W,
 					Y: lineTop,
-					W: diff.OldRect.W - numbersRect.W,
+					W: diff.NewRect.W - numbersRect.W,
 					H: lineHeight,
 				}
 
@@ -229,6 +252,9 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 
 			lineNumber += 1
 		}
+
+		chunkStart = lineTop
+		lineTop += separatorHeight
 	}
 
 	renderer.ClipRect(rend, nil)
@@ -242,6 +268,8 @@ func (diff *DiffView) diffLineTypeToColor(t git.GitDiffLineType) sdl.Color {
 		return sdl.Color{R: 169, G: 26, B: 23, A: 49}
 	case git.GIT_LINE_UNMODIFIED:
 		panic("Unmodified line should not have any background")
+	case git.GIT_LINE_EMPTY:
+		panic("Empty line should not have any background")
 	default:
 		panic("Unreachable")
 	}
