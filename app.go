@@ -281,8 +281,10 @@ func (app *App) handleNormalInput(input *Input) {
 			app.Repo.Changes = git.Commit(app.Repo.Changes, message, app.Repo.Path)
 			app.Staging.ShowEntries(app.Repo.Changes)
 
-			activeEntry := app.Staging.GetActiveEntry()
-			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+			if len(app.Repo.Changes) > 0 {
+				activeEntry := app.Staging.GetActiveEntry()
+				app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+			}
 		})
 	} else if input.TypedCharacter == 'u' {
 		app.Repo.Changes = git.UndoLastCommit(app.Repo.Path)
