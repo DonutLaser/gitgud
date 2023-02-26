@@ -60,7 +60,7 @@ func OpenSettingsInExternalProgram() {
 func LoadSettings() (result Settings) {
 	settingsPath := getSettingsPath()
 
-	if !filesystem.DoesFileExist(settingsPath) {
+	if !filesystem.DoesPathExist(settingsPath) {
 		result.Save()
 		return
 	}

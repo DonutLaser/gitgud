@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/DonutLaser/git-client/filesystem"
 	"github.com/DonutLaser/git-client/font"
 	"github.com/DonutLaser/git-client/git"
 	"github.com/DonutLaser/git-client/image"
@@ -302,6 +303,13 @@ func (app *App) handleNormalInput(input *Input) {
 	} else if input.TypedCharacter == 'n' {
 		if input.Ctrl {
 			app.CommandInput.Open("Path to new repository folder", func(folderPath string) {
+				if !filesystem.DoesPathExist(folderPath) {
+					success := filesystem.CreateDirectory(folderPath)
+					if !success {
+						return
+					}
+				}
+
 				git.CreateRepository(folderPath)
 				app.setRepository(folderPath)
 				app.Settings.AddRepo(folderPath)
