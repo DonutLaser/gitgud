@@ -160,6 +160,10 @@ func CreateRepository(pathToRepo string) {
 	executeGit([]string{"init"}, pathToRepo)
 }
 
+func CreateBranch(branchName string, pathToRepo string) {
+	executeGit([]string{"checkout", "-b", branchName}, pathToRepo)
+}
+
 func diffNew(filename string, pathToRepo string) (result GitDiff) {
 	output := executeGit([]string{"diff", "--no-index", "/dev/null", filename}, pathToRepo)
 	return ParseDiff(output)

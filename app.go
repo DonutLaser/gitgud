@@ -301,6 +301,23 @@ func (app *App) handleNormalInput(input *Input) {
 				app.Settings.Save()
 			})
 		}
+	} else if input.TypedCharacter == 'N' {
+		if input.Ctrl {
+			app.CommandInput.Open("New branch name", func(branchName string) {
+				git.CreateBranch(branchName, app.Repo.Path)
+				app.Repo.CurrentBranch = git.GetCurrentBranch(app.Repo.Path)
+				app.Repo.Branches = git.ListBranches(app.Repo.Path)
+				app.Repo.Changes = git.Status(app.Repo.Path)
+
+				app.Statusbar.ShowRepoName(app.Repo.Name)
+				app.Statusbar.ShowBranchName(app.Repo.CurrentBranch)
+
+				app.Staging.ShowEntries(app.Repo.Changes)
+
+				app.Settings.SetActiveBranch(app.Repo.CurrentBranch)
+				app.Settings.Save()
+			})
+		}
 	} else if input.TypedCharacter == 'w' {
 		if input.Ctrl {
 			app.Quit = true
