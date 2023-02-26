@@ -46,7 +46,8 @@ type App struct {
 	Fonts map[string]font.Font
 	Icons map[string]image.Image
 
-	Quit bool
+	Quit        bool
+	Initialized bool
 }
 
 func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (result App) {
@@ -73,12 +74,6 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 	result.Icons["entry_on"] = image.LoadImage("./assets/icons/icon_entry_on.png", renderer)
 
 	result.Settings = settings.LoadSettings()
-
-	if result.Settings.ActiveRepo != "" {
-		result.setRepository(result.Settings.ActiveRepo)
-	} else if len(result.Settings.RepoList) > 0 {
-		result.setRepository(result.Settings.RepoList[0])
-	}
 
 	result.Quit = false
 
@@ -116,19 +111,31 @@ func (app *App) Resize(windowWidth int32, windowHeight int32) {
 }
 
 func (app *App) Refresh() {
-	if app.Settings.ActiveRepo == "" {
+	if app.Initialized {
+		if app.Settings.ActiveRepo == "" {
+			return
+		}
+
+		app.Repo.Branches = git.ListBranches(app.Repo.Path)
+		app.Repo.Changes = git.Status(app.Repo.Path)
+
+		app.Staging.ShowEntries(app.Repo.Changes)
+
+		if len(app.Repo.Changes) > 0 {
+			activeEntry := app.Staging.GetActiveEntry()
+			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+		}
+
 		return
 	}
 
-	app.Repo.Branches = git.ListBranches(app.Repo.Path)
-	app.Repo.Changes = git.Status(app.Repo.Path)
-
-	app.Staging.ShowEntries(app.Repo.Changes)
-
-	if len(app.Repo.Changes) > 0 {
-		activeEntry := app.Staging.GetActiveEntry()
-		app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+	if app.Settings.ActiveRepo != "" {
+		app.setRepository(app.Settings.ActiveRepo)
+	} else if len(app.Settings.RepoList) > 0 {
+		app.setRepository(app.Settings.RepoList[0])
 	}
+
+	app.Initialized = true
 }
 
 func (app *App) Tick(input *Input) {
