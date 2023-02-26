@@ -64,87 +64,11 @@ func (diff *DiffView) renderOld(rend *sdl.Renderer, app *App) {
 	renderer.ClipRect(rend, diff.OldRect)
 	renderer.DrawRect(rend, diff.OldRect, sdl.Color{R: 47, G: 46, B: 47, A: 255})
 
-	if len(diff.Data.Chunks) == 1 && diff.Data.Chunks[0].Old.StartLine == 0 && diff.Data.Chunks[0].Old.EndLine == 0 {
+	if len(diff.Data.OldChunks) == 1 && diff.Data.OldChunks[0].StartLine == 0 && diff.Data.OldChunks[0].EndLine == 0 {
 		return
 	}
 
-	numbersRect := sdl.Rect{
-		X: diff.OldRect.X,
-		Y: diff.OldRect.Y,
-		W: 40,
-		H: diff.OldRect.H,
-	}
-	renderer.DrawRect(rend, &numbersRect, sdl.Color{R: 30, G: 30, B: 30, A: 255})
-
-	mainFont := app.Fonts["12"]
-
-	var lineHeight int32 = 23
-	var separatorHeight int32 = 12
-
-	chunkStart := diff.NewRect.Y + diff.ScrollOffset
-	lineTop := chunkStart + separatorHeight
-	for _, chunk := range diff.Data.Chunks {
-		lineNumber := chunk.Old.StartLine
-
-		separatorRect := sdl.Rect{
-			X: diff.OldRect.X,
-			Y: chunkStart,
-			W: diff.OldRect.W,
-			H: separatorHeight,
-		}
-		renderer.DrawRect(rend, &separatorRect, sdl.Color{R: 63, G: 63, B: 63, A: 255})
-
-		for _, line := range chunk.Old.Lines {
-			if line.Type != git.GIT_LINE_UNMODIFIED && line.Type != git.GIT_LINE_EMPTY {
-				bgRect := sdl.Rect{
-					X: numbersRect.X + numbersRect.W,
-					Y: lineTop,
-					W: diff.OldRect.W - numbersRect.W,
-					H: lineHeight,
-				}
-
-				bgColor := diff.diffLineTypeToColor(line.Type)
-
-				renderer.DrawRectTransparent(rend, &bgRect, bgColor)
-
-				lineNumberBgRect := sdl.Rect{
-					X: numbersRect.X,
-					Y: lineTop,
-					W: numbersRect.W,
-					H: lineHeight,
-				}
-
-				renderer.DrawRectTransparent(rend, &lineNumberBgRect, bgColor)
-			}
-
-			lineNumberStr := strconv.Itoa(int(lineNumber))
-
-			lineNumberWidth := mainFont.GetStringWidth(lineNumberStr)
-			lineNumberRect := sdl.Rect{
-				X: numbersRect.X + numbersRect.W - lineNumberWidth - 10,
-				Y: lineTop + (lineHeight-mainFont.Size)/2,
-				W: lineNumberWidth,
-				H: mainFont.Size,
-			}
-			renderer.DrawText(rend, &mainFont, lineNumberStr, &lineNumberRect, sdl.Color{R: 171, G: 171, B: 171, A: 255})
-
-			textWidth := mainFont.GetStringWidth(line.Text)
-			textRect := sdl.Rect{
-				X: numbersRect.X + numbersRect.W + 10,
-				Y: lineTop + (lineHeight-mainFont.Size)/2,
-				W: textWidth,
-				H: mainFont.Size,
-			}
-			renderer.DrawText(rend, &mainFont, line.Text, &textRect, sdl.Color{R: 171, G: 171, B: 171, A: 255})
-
-			lineTop += lineHeight
-
-			lineNumber += 1
-		}
-
-		chunkStart = lineTop
-		lineTop += separatorHeight
-	}
+	diff.renderChunks(rend, diff.OldRect, diff.Data.OldChunks, app)
 
 	renderer.ClipRect(rend, nil)
 }
@@ -156,7 +80,7 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 	message := ""
 	if diff.Entry.Type == git.GIT_ENTRY_DELETED {
 		message = "File was removed"
-	} else if len(diff.Data.Chunks) == 1 && diff.Data.Chunks[0].New.BinaryFile {
+	} else if len(diff.Data.NewChunks) == 1 && diff.Data.NewChunks[0].BinaryFile {
 		message = "Cannot show diff of binary file"
 	}
 
@@ -179,11 +103,17 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 		return
 	}
 
+	diff.renderChunks(rend, diff.NewRect, diff.Data.NewChunks, app)
+
+	renderer.ClipRect(rend, nil)
+}
+
+func (diff *DiffView) renderChunks(rend *sdl.Renderer, diffRect *sdl.Rect, chunks []git.GitDiffFile, app *App) {
 	numbersRect := sdl.Rect{
-		X: diff.NewRect.X,
-		Y: diff.NewRect.Y,
+		X: diffRect.X,
+		Y: diffRect.Y,
 		W: 40,
-		H: diff.NewRect.H,
+		H: diffRect.H,
 	}
 	renderer.DrawRect(rend, &numbersRect, sdl.Color{R: 30, G: 30, B: 30, A: 255})
 
@@ -192,25 +122,25 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 	var lineHeight int32 = 23
 	var separatorHeight int32 = 12
 
-	chunkStart := diff.NewRect.Y + diff.ScrollOffset
+	chunkStart := diffRect.Y + diff.ScrollOffset
 	lineTop := chunkStart + separatorHeight
-	for _, chunk := range diff.Data.Chunks {
-		lineNumber := chunk.New.StartLine
+	for _, chunk := range chunks {
+		lineNumber := chunk.StartLine
 
 		separatorRect := sdl.Rect{
-			X: diff.NewRect.X,
+			X: diffRect.X,
 			Y: chunkStart,
-			W: diff.NewRect.W,
+			W: diffRect.W,
 			H: separatorHeight,
 		}
 		renderer.DrawRect(rend, &separatorRect, sdl.Color{R: 63, G: 63, B: 63, A: 255})
 
-		for _, line := range chunk.New.Lines {
+		for _, line := range chunk.Lines {
 			if line.Type != git.GIT_LINE_UNMODIFIED && line.Type != git.GIT_LINE_EMPTY {
 				bgRect := sdl.Rect{
 					X: numbersRect.X + numbersRect.W,
 					Y: lineTop,
-					W: diff.NewRect.W - numbersRect.W,
+					W: diffRect.W - numbersRect.W,
 					H: lineHeight,
 				}
 
@@ -256,8 +186,6 @@ func (diff *DiffView) renderNew(rend *sdl.Renderer, app *App) {
 		chunkStart = lineTop
 		lineTop += separatorHeight
 	}
-
-	renderer.ClipRect(rend, nil)
 }
 
 func (diff *DiffView) diffLineTypeToColor(t git.GitDiffLineType) sdl.Color {

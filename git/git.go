@@ -2,7 +2,6 @@ package git
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -31,12 +30,8 @@ type GitStatusEntry struct {
 }
 
 type GitDiff struct {
-	Chunks []GitDiffChunk
-}
-
-type GitDiffChunk struct {
-	Old GitDiffFile
-	New GitDiffFile
+	OldChunks []GitDiffFile
+	NewChunks []GitDiffFile
 }
 
 type GitDiffFile struct {
@@ -49,39 +44,6 @@ type GitDiffFile struct {
 type GitDiffLine struct {
 	Text string
 	Type GitDiffLineType
-}
-
-func (diff *GitDiff) ToString() string {
-	var sb strings.Builder
-
-	for _, chunk := range diff.Chunks {
-		sb.WriteString(fmt.Sprintf("Chunk: old (%d - %d) | new (%d - %d)\n", chunk.Old.StartLine, chunk.Old.EndLine, chunk.New.StartLine, chunk.New.EndLine))
-		sb.WriteString("NEW:\n")
-		for _, line := range chunk.New.Lines {
-			lineType := " "
-			if line.Type == GIT_LINE_NEW {
-				lineType = "+"
-			} else {
-				lineType = "-"
-			}
-
-			sb.WriteString(fmt.Sprintf("%s %s\n", lineType, line.Text))
-		}
-
-		sb.WriteString("OLD:\n")
-		for _, line := range chunk.Old.Lines {
-			lineType := " "
-			if line.Type == GIT_LINE_NEW {
-				lineType = "+"
-			} else {
-				lineType = "-"
-			}
-
-			sb.WriteString(fmt.Sprintf("%s %s\n", lineType, line.Text))
-		}
-	}
-
-	return sb.String()
 }
 
 // How to read diff output
