@@ -28,6 +28,7 @@ type Repo struct {
 	CurrentBranch string
 	Branches      []string
 	Changes       []git.GitStatusEntry
+	Stash         []git.GitStashEntry
 }
 
 type App struct {
@@ -73,6 +74,7 @@ func NewApp(windowWidth int32, windowHeight int32, renderer *sdl.Renderer) (resu
 	result.Icons["branch"] = image.LoadImage("./assets/icons/icon_branch.png", renderer)
 	result.Icons["entry_off"] = image.LoadImage("./assets/icons/icon_entry_off.png", renderer)
 	result.Icons["entry_on"] = image.LoadImage("./assets/icons/icon_entry_on.png", renderer)
+	result.Icons["stash"] = image.LoadImage("./assets/icons/icon_stash.png", renderer)
 
 	result.Settings = settings.LoadSettings()
 
@@ -98,6 +100,8 @@ func (app *App) Close() {
 	icon = app.Icons["entry_off"]
 	icon.Unload()
 	icon = app.Icons["entry_on"]
+	icon.Unload()
+	icon = app.Icons["stash"]
 	icon.Unload()
 }
 
@@ -384,7 +388,12 @@ func (app *App) handleStashInput(input *Input) {
 	}
 
 	if input.TypedCharacter == 'a' {
-		// Stash everything
+		git.Stash(app.Repo.Path)
+
+		app.Repo.Changes = git.Status(app.Repo.Path)
+		app.Repo.Stash = git.ListStash(app.Repo.Path)
+		app.Staging.ShowEntries(app.Repo.Changes)
+		app.Statusbar.ShowStashExists(git.DoesBranchHaveStash(app.Repo.CurrentBranch, app.Repo.Stash))
 	}
 }
 
@@ -394,9 +403,11 @@ func (app *App) setRepository(repoPath string) {
 	app.Repo.CurrentBranch = git.GetCurrentBranch(app.Repo.Path)
 	app.Repo.Branches = git.ListBranches(app.Repo.Path)
 	app.Repo.Changes = git.Status(app.Repo.Path)
+	app.Repo.Stash = git.ListStash(app.Repo.Path)
 
 	app.Statusbar.ShowRepoName(app.Repo.Name)
 	app.Statusbar.ShowBranchName(app.Repo.CurrentBranch)
+	app.Statusbar.ShowStashExists(git.DoesBranchHaveStash(app.Repo.CurrentBranch, app.Repo.Stash))
 
 	app.Staging.ShowEntries(app.Repo.Changes)
 

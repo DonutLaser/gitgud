@@ -46,8 +46,10 @@ type GitDiffLine struct {
 	Type GitDiffLineType
 }
 
-// How to read diff output
-// https://stackoverflow.com/questions/27508982/interpreting-git-diff-output
+type GitStashEntry struct {
+	BranchName string
+	Index      string
+}
 
 func Status(pathToRepo string) (result []GitStatusEntry) {
 	output := executeGit([]string{"status", "--porcelain", "-u"}, pathToRepo)
@@ -74,6 +76,21 @@ func SwitchToBranch(branchName string, pathToRepo string) {
 func ListBranches(pathToRepo string) (result []string) {
 	output := executeGit([]string{"branch", "-l", "--format='%(refname:short)'"}, pathToRepo)
 	return ParseBranches(output)
+}
+
+func ListStash(pathToRepo string) (result []GitStashEntry) {
+	output := executeGit([]string{"stash", "list"}, pathToRepo)
+	return ParseStashList(output)
+}
+
+func DoesBranchHaveStash(branchName string, stash []GitStashEntry) bool {
+	for _, entry := range stash {
+		if entry.BranchName == branchName {
+			return true
+		}
+	}
+
+	return false
 }
 
 func GetCurrentBranch(pathToRepo string) string {

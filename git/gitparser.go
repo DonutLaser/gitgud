@@ -45,6 +45,31 @@ func ParseBranches(text string) (result []string) {
 	return
 }
 
+func ParseStashList(text string) (result []GitStashEntry) {
+	if text == "" {
+		return
+	}
+
+	lines := strings.Split(text, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+
+		split := strings.Split(trimmed, ":")
+
+		result = append(result, GitStashEntry{
+			Index:      split[0],
+			BranchName: strings.Replace(strings.TrimSpace(split[1]), "WIP on ", "", 1),
+		})
+	}
+
+	return
+}
+
+// How to read diff output
+// https://stackoverflow.com/questions/27508982/interpreting-git-diff-output
 func ParseDiff(text string) (result GitDiff) {
 	if text == "" {
 		return
