@@ -93,6 +93,16 @@ func DoesBranchHaveStash(branchName string, stash []GitStashEntry) bool {
 	return false
 }
 
+func GetStashIndex(branchName string, stash []GitStashEntry) string {
+	for _, entry := range stash {
+		if entry.BranchName == branchName {
+			return entry.Index
+		}
+	}
+
+	return ""
+}
+
 func GetCurrentBranch(pathToRepo string) string {
 	output := executeGit([]string{"branch", "--show-current"}, pathToRepo)
 	return strings.TrimSpace(output)
@@ -133,6 +143,15 @@ func Commit(entries []GitStatusEntry, message string, pathToRepo string) (result
 func UndoLastCommit(pathToRepo string) (result []GitStatusEntry) {
 	executeGit([]string{"reset", "--soft", "HEAD~"}, pathToRepo)
 	return Status(pathToRepo)
+}
+
+func ApplyStash(index string, pathToRepo string) (result []GitStatusEntry) {
+	executeGit([]string{"stash", "pop", index}, pathToRepo)
+	return Status(pathToRepo)
+}
+
+func DeleteStash(index string, pathToRepo string) {
+	executeGit([]string{"stash", "drop", index}, pathToRepo)
 }
 
 func CreateRepository(pathToRepo string) {

@@ -257,13 +257,24 @@ func (app *App) handleNormalInput(input *Input) {
 				})
 			} else {
 				app.Search.Open("Branch name", app.Repo.Branches, SEARCH_INCLUDES, func(branchName string) {
+					git.SwitchToBranch(branchName, app.Repo.Path)
 					app.Repo.CurrentBranch = branchName
-					app.Statusbar.ShowBranchName(app.Repo.CurrentBranch)
-
-					git.SwitchToBranch(app.Repo.CurrentBranch, app.Repo.Path)
 
 					app.Settings.SetActiveBranch(branchName)
 					app.Settings.Save()
+
+					app.Statusbar.ShowBranchName(app.Repo.CurrentBranch)
+					app.Repo.Changes = git.Status(app.Repo.Path)
+					app.Repo.Stash = git.ListStash(app.Repo.Path)
+
+					app.Statusbar.ShowStashExists(git.DoesBranchHaveStash(app.Repo.CurrentBranch, app.Repo.Stash))
+
+					app.Staging.ShowEntries(app.Repo.Changes)
+
+					if len(app.Repo.Changes) > 0 {
+						activeEntry := app.Staging.GetActiveEntry()
+						app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+					}
 				})
 			}
 		}
@@ -366,8 +377,10 @@ func (app *App) handleDeleteInput(input *Input) {
 			app.Repo.Changes = git.Status(app.Repo.Path)
 			app.Staging.ShowEntries(app.Repo.Changes)
 
-			activeEntry = app.Staging.GetActiveEntry()
-			app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+			if len(app.Repo.Changes) > 0 {
+				activeEntry = app.Staging.GetActiveEntry()
+				app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+			}
 		}
 
 		app.setMode(MODE_NORMAL)
@@ -376,8 +389,6 @@ func (app *App) handleDeleteInput(input *Input) {
 
 		app.Staging.ShowEntries([]git.GitStatusEntry{})
 		app.setMode(MODE_NORMAL)
-	} else if input.TypedCharacter == 's' {
-		// Delete stash
 	}
 }
 
@@ -387,13 +398,42 @@ func (app *App) handleStashInput(input *Input) {
 		return
 	}
 
-	if input.TypedCharacter == 'a' {
+	if input.TypedCharacter == 's' {
 		git.Stash(app.Repo.Path)
 
 		app.Repo.Changes = git.Status(app.Repo.Path)
 		app.Repo.Stash = git.ListStash(app.Repo.Path)
 		app.Staging.ShowEntries(app.Repo.Changes)
 		app.Statusbar.ShowStashExists(git.DoesBranchHaveStash(app.Repo.CurrentBranch, app.Repo.Stash))
+
+		app.setMode(MODE_NORMAL)
+	} else if input.TypedCharacter == 'a' {
+		index := git.GetStashIndex(app.Repo.CurrentBranch, app.Repo.Stash)
+
+		if index != "" {
+			app.Repo.Changes = git.ApplyStash(index, app.Repo.Path)
+			app.Repo.Stash = git.ListStash(app.Repo.Path)
+			app.Staging.ShowEntries(app.Repo.Changes)
+			app.Statusbar.ShowStashExists(false)
+
+			if len(app.Repo.Changes) > 0 {
+				activeEntry := app.Staging.GetActiveEntry()
+				app.DiffView.ShowDiff(git.DiffEntry(activeEntry, app.Repo.Path), activeEntry)
+			}
+		}
+
+		app.setMode(MODE_NORMAL)
+	} else if input.TypedCharacter == 'd' {
+		index := git.GetStashIndex(app.Repo.CurrentBranch, app.Repo.Stash)
+
+		if index != "" {
+			git.DeleteStash(index, app.Repo.Path)
+			app.Statusbar.ShowStashExists(false)
+
+			app.Repo.Stash = git.ListStash(app.Repo.Path)
+		}
+
+		app.setMode(MODE_NORMAL)
 	}
 }
 
